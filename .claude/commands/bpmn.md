@@ -1,31 +1,64 @@
 # Skill: Gerador de BPMN de Alto Padrão
 
-Você é um especialista em modelagem de processos BPMN 2.0. Quando o usuário descrever um processo (em qualquer idioma), você deve:
+Você é um especialista em modelagem de processos BPMN 2.0.
 
-## 1. Analisar o processo
+## Entrada aceita
 
-Identifique e extraia:
-- **Pools/Lanes**: participantes, departamentos, sistemas ou atores envolvidos
-- **Eventos de início**: o que desencadeia o processo (mensagem, tempo, manual, etc.)
-- **Tarefas**: atividades realizadas por humanos (`userTask`), sistemas (`serviceTask`), scripts (`scriptTask`) ou manual (`manualTask`)
-- **Gateways**: decisões exclusivas (`exclusiveGateway`), paralelas (`parallelGateway`), inclusivas (`inclusiveGateway`) ou baseadas em eventos (`eventBasedGateway`)
-- **Eventos intermediários**: esperas, mensagens, timers ao longo do processo
-- **Eventos de fim**: como e com qual resultado o processo termina
-- **Fluxos de sequência**: a ordem e condições de cada transição
+O argumento `$ARGUMENTS` pode ser:
 
-## 2. Aplicar boas práticas BPMN
+1. **Caminho de um documento** (`.pdf`, `.txt`, `.md`, `.docx`, `.csv`, etc.) — leia o arquivo com a ferramenta Read e extraia a descrição do processo
+2. **Texto direto** — descrição do processo em linguagem natural
 
-- Nomear tarefas no formato **verbo + objeto** ("Aprovar Solicitação", "Enviar Notificação")
-- Nunca deixar um gateway sem rótulo nas saídas condicionais
-- Usar eventos de início e fim corretos para o contexto
-- Preferir `exclusiveGateway` para decisões do tipo "ou/ou"
-- Usar `parallelGateway` para atividades simultâneas
-- Evitar fluxos de sequência cruzando pools (usar mensagens entre pools)
-- Manter o diagrama legível: fluxo da esquerda para direita
+### Como detectar a entrada
 
-## 3. Gerar o arquivo BPMN 2.0
+- Se `$ARGUMENTS` termina com uma extensão de arquivo conhecida (`.pdf`, `.txt`, `.md`, `.docx`, `.rtf`, `.csv`) **ou** parece um caminho (contém `/` ou `\`), trate como arquivo:
+  - Use a ferramenta **Read** para ler o conteúdo do caminho informado
+  - Se o arquivo não for encontrado, informe o erro e peça o caminho correto
+- Caso contrário, trate `$ARGUMENTS` como descrição textual direta do processo
 
-Gere um XML BPMN 2.0 válido, completo e bem estruturado. Use este template como base:
+---
+
+## Passo 1 — Extrair o processo do documento
+
+Se a entrada for um documento, analise todo o conteúdo e extraia:
+- O nome/objetivo do processo
+- Os participantes, setores ou sistemas envolvidos
+- Todas as etapas, atividades e ações descritas
+- Condições, decisões, aprovações e rejeições
+- Exceções, erros e fluxos alternativos
+- Eventos de início e fim
+
+Se o documento contiver múltiplos processos, pergunte ao usuário qual modelar ou modele todos, um arquivo `.bpmn` por processo.
+
+---
+
+## Passo 2 — Analisar e estruturar
+
+Identifique e mapeie:
+- **Pools/Lanes**: participantes, departamentos, sistemas ou atores
+- **Eventos de início**: manual, mensagem, timer, sinal, condicional
+- **Tarefas**: `userTask` (humano), `serviceTask` (sistema/API), `scriptTask` (automação), `manualTask` (físico/não-digital), `businessRuleTask` (regra de negócio)
+- **Gateways**: `exclusiveGateway` (ou/ou), `parallelGateway` (simultâneo), `inclusiveGateway` (um ou mais), `eventBasedGateway` (aguarda evento)
+- **Eventos intermediários**: timer, mensagem, erro, escalada
+- **Eventos de fim**: normal, erro, mensagem, terminação
+- **Fluxos de sequência** com condições e rótulos
+
+---
+
+## Passo 3 — Aplicar boas práticas BPMN
+
+- Nomear tarefas no formato **verbo + objeto** ("Aprovar Solicitação", "Enviar Notificação por E-mail")
+- Rotular **todas** as saídas de gateways condicionais
+- Usar o tipo correto de evento para cada contexto
+- Comunicação entre pools via **mensagens**, nunca com fluxo de sequência
+- Fluxo principal da **esquerda para direita**
+- IDs únicos e descritivos para cada elemento (`Task_aprovar_solicitacao`, `GW_aprovado`)
+
+---
+
+## Passo 4 — Gerar o XML BPMN 2.0
+
+Gere um XML BPMN 2.0 completo, válido e bem estruturado com coordenadas visuais (`bpmndi`):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -38,37 +71,61 @@ Gere um XML BPMN 2.0 válido, completo e bem estruturado. Use este template como
              id="Definitions_1">
 
   <process id="Process_1" name="[Nome do Processo]" isExecutable="false">
-    <!-- eventos, tarefas, gateways e fluxos aqui -->
+    <!-- StartEvent -->
+    <startEvent id="Start_1" name="[Gatilho]">
+      <outgoing>Flow_1</outgoing>
+    </startEvent>
+
+    <!-- Tarefas, Gateways, Eventos intermediários -->
+
+    <!-- EndEvent -->
+    <endEvent id="End_1" name="[Resultado Final]">
+      <incoming>Flow_N</incoming>
+    </endEvent>
+
+    <!-- Fluxos de Sequência -->
+    <sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="..." />
   </process>
 
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-      <!-- coordenadas visuais dos elementos aqui -->
+      <!-- Shapes e Edges com coordenadas x,y,width,height -->
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 
 </definitions>
 ```
 
-## 4. Salvar o arquivo
+---
 
-Salve o XML gerado em um arquivo `.bpmn` dentro da pasta `bpmn/` do projeto, com nome descritivo em snake_case (ex: `bpmn/aprovacao_de_credito.bpmn`).
+## Passo 5 — Salvar o arquivo
 
-## 5. Apresentar resumo
+Use a ferramenta **Write** para salvar o XML em `bpmn/<nome_do_processo>.bpmn` com nome em snake_case.
 
-Após gerar o arquivo, apresente:
-- **Nome do processo**
-- **Participantes/Lanes** identificados
-- **Quantidade** de tarefas, gateways e eventos
-- **Caminho feliz** (fluxo principal sem exceções) em uma linha
-- **Onde abrir**: sugerir bpmn.io (editor gratuito online) para visualizar
+Se a pasta `bpmn/` não existir, crie-a primeiro com Bash: `mkdir -p bpmn`.
 
 ---
 
-**Argumento esperado**: descrição do processo em linguagem natural, no idioma que o usuário preferir.
+## Passo 6 — Apresentar resumo
 
-Exemplo de invocação:
+Após salvar, exiba:
+
 ```
-/bpmn Processo de onboarding de novo funcionário: RH abre vaga, candidato se inscreve, 
-RH filtra currículos, faz entrevista, se aprovado contrata, se reprovado arquiva.
+✅ BPMN gerado: bpmn/<nome_do_processo>.bpmn
+
+📋 Processo: [Nome]
+👥 Participantes: [lista]
+📊 Elementos: X tarefas · Y gateways · Z eventos
+🔀 Caminho principal: Início → Tarefa A → Decisão → Tarefa B → Fim
+🌐 Visualizar: arraste o arquivo para https://bpmn.io
+```
+
+---
+
+## Invocação
+
+```
+/bpmn caminho/para/documento.pdf
+/bpmn caminho/para/processo.txt
+/bpmn Descrição direta do processo em texto livre...
 ```
